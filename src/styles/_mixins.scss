@@ -1,0 +1,61 @@
+@import './_variables.scss';
+
+// 彈性布局
+@mixin flex($direction: row, $justify: flex-start, $align: stretch) {
+  display: flex;
+  flex-direction: $direction;
+  justify-content: $justify;
+  align-items: $align;
+}
+
+// 響應式斷點
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == sm {
+    @media (min-width: $breakpoint-sm) { @content; }
+  }
+  @else if $breakpoint == md {
+    @media (min-width: $breakpoint-md) { @content; }
+  }
+  @else if $breakpoint == lg {
+    @media (min-width: $breakpoint-lg) { @content; }
+  }
+  @else if $breakpoint == xl {
+    @media (min-width: $breakpoint-xl) { @content; }
+  }
+}
+
+// 卡片樣式
+@mixin card-style {
+  background-color: $bg-card;
+  border-radius: $border-radius-md;
+  box-shadow: $shadow-md;
+  padding: $spacing-lg;
+  transition: box-shadow $transition-normal;
+  
+  &:hover {
+    box-shadow: $shadow-lg;
+  }
+}
+
+// 漸變背景
+@mixin gradient-bg {
+  background-image: linear-gradient(45deg,
+    rgba($primary-color, 0.1) 0%,
+    rgba($primary-dark, 0.5) 100%
+  );
+}
+
+// 文字溢出省略
+@mixin text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// 多行文字溢出省略
+@mixin multi-line-ellipsis($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+} 
