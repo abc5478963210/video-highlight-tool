@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import type { UploadProps } from 'ant-design-vue'
+import { callApi } from '@/utils/callApi'
+import { processVideo } from '@/api/video'
 import {
   ArrowLeftOutlined,
   UploadOutlined,
   VideoCameraOutlined
 } from '@ant-design/icons-vue'
+import { UploadProps } from 'ant-design-vue'
 
 const router = useRouter()
 const videoFile = ref<File | null>(null)
@@ -19,7 +21,7 @@ const handleUpload: UploadProps['customRequest'] = async ({ file }) => {
     videoFile.value = file
     videoUrl.value = URL.createObjectURL(file)
     isProcessing.value = true
-
+    await callApi(processVideo(file))
     // TODO: 模擬 AI 處理
     setTimeout(() => {
       isProcessing.value = false
@@ -30,18 +32,19 @@ const handleUpload: UploadProps['customRequest'] = async ({ file }) => {
 const goBack = () => {
   router.push('/')
 }
+
 </script>
 
 <template>
   <div class="highlight-tool">
-    <a-layout>
+    <a-layout class="layout">
       <a-layout-header class="header">
         <div class="header-content">
           <a-button type="link" @click="goBack">
             <template #icon><arrow-left-outlined /></template>
             返回
           </a-button>
-          <h1>影片精華擷取工具</h1>
+          <span class="header-title">Video Highlight Tool</span>
         </div>
       </a-layout-header>
 
@@ -49,13 +52,15 @@ const goBack = () => {
         <a-row :gutter="16">
           <a-col :span="12">
             <div class="editor-section">
-              <a-upload v-if="!videoFile" :customRequest="handleUpload" :showUploadList="false" accept="video/*"
-                class="upload-area">
-                <div class="upload-content">
-                  <upload-outlined class="upload-icon" />
-                  <p>點擊或拖放影片檔案至此處</p>
-                </div>
-              </a-upload>
+              <div v-if="!videoFile" class="upload-wrapper">
+                <a-upload :customRequest="handleUpload" :showUploadList="false" accept="video/*" class="upload-area">
+                  <div class="upload-content">
+                    <upload-outlined class="upload-icon" />
+                    <p>點擊或拖放影片檔案至此處</p>
+                  </div>
+                </a-upload>
+              </div>
+
 
               <div v-else class="transcript-section">
                 <div v-if="isProcessing" class="processing-overlay">
@@ -105,19 +110,17 @@ const goBack = () => {
 
 .highlight-tool {
   min-height: 100vh;
-  background: linear-gradient(135deg, $bg-dark 0%, darken($bg-dark, 5%) 100%);
+  background-color: $bg-dark;
   position: relative;
 
   &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(circle at 50% 50%, rgba($primary-color, 0.1) 0%, transparent 70%);
-    pointer-events: none;
+    display: none;
   }
+}
+
+.layout {
+  background-color: $bg-dark;
+  background-image: linear-gradient(45deg, rgba(157, 142, 199, 0.1) 0%, rgba(122, 107, 163, 0.5) 100%);
 }
 
 .header {
@@ -141,12 +144,18 @@ const goBack = () => {
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+
+    .header-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: $text-primary;
+    }
   }
 }
 
 .content {
-  padding: $spacing-lg;
   position: relative;
+  padding: $spacing-sm;
   z-index: 1;
 }
 
@@ -156,7 +165,7 @@ const goBack = () => {
   background: rgba($bg-card, 0.8);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-radius: $border-radius-md;
+  // border-radius: $border-radius-md;
   overflow: hidden;
   border: 1px solid $border-color;
   box-shadow: $shadow-md;
@@ -166,6 +175,20 @@ const goBack = () => {
     box-shadow: $shadow-lg;
     border-color: rgba($primary-color, 0.3);
   }
+}
+
+.editor-section {
+  @include flex(column, center, center);
+  background: #f6f6f6;
+
+}
+
+.upload-wrapper {
+  @include flex(column, center, center);
+  width: 50%;
+  height: 50%;
+  color: $primary-dark;
+
 }
 
 .upload-area {
@@ -182,23 +205,28 @@ const goBack = () => {
   @include flex(column, center, center);
   height: 100%;
   gap: $spacing-md;
-  color: $text-secondary;
-  transition: $transition-normal;
-
-  &:hover {
-    color: $primary-light;
-  }
+  color: $primary-dark;
+  border: 2px dashed $primary-color;
+  border-radius: $border-radius-md;
 
   .upload-icon {
     font-size: 3rem;
     color: $primary-color;
   }
+
+  p {
+    color: $primary-dark;
+    font-weight: 600;
+  }
+
+  &:hover {
+    color: $primary-light;
+    background-color: $bg-hover;
+  }
 }
 
 .transcript-section {
   height: 100%;
-  padding: $spacing-lg;
-  position: relative;
 }
 
 .processing-overlay {
@@ -208,11 +236,8 @@ const goBack = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba($bg-dark, 0.9);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
   gap: $spacing-md;
-  color: $text-primary;
+  color: $primary-color;
 
   :deep(.ant-spin) {
     .ant-spin-dot-item {
