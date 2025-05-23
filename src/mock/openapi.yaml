@@ -1,0 +1,132 @@
+openapi: 3.1.0
+info:
+  title: 影片處理 API
+  version: 1.0.0
+  description: 用於處理影片轉錄和高亮標記的 API
+
+paths:
+  /api/process-video:
+    post:
+      summary: 處理影片並生成轉錄
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                video:
+                  type: string
+                  format: binary
+                  description: 上傳的影片檔案
+              required:
+                - video
+      responses:
+        "200":
+          description: 成功處理影片
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      transcript:
+                        type: object
+                        properties:
+                          sections:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                title:
+                                  type: string
+                                  example: 開場介紹
+                                startTime:
+                                  type: integer
+                                  example: 0
+                                endTime:
+                                  type: integer
+                                  example: 30
+                                sentences:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      text:
+                                        type: string
+                                        example: 歡迎來到我們的影片
+                                      startTime:
+                                        type: integer
+                                        example: 0
+                                      endTime:
+                                        type: integer
+                                        example: 5
+                                      isHighlight:
+                                        type: boolean
+                                        example: false
+                  message:
+                    type: string
+                    example: 處理成功
+
+  /api/save-highlights:
+    post:
+      summary: 保存影片高亮標記
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                highlights:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      startTime:
+                        type: integer
+                      endTime:
+                        type: integer
+                      text:
+                        type: string
+              required:
+                - highlights
+      responses:
+        "200":
+          description: 成功保存高亮標記
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      success:
+                        type: boolean
+                        example: true
+                      highlights:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            startTime:
+                              type: integer
+                              example: 5
+                            endTime:
+                              type: integer
+                              example: 10
+                            text:
+                              type: string
+                              example: 今天我們要討論一個重要的主題
+                  message:
+                    type: string
+                    example: 保存成功

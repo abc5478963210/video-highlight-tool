@@ -1,27 +1,33 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: '/',
-  timeout: 10000
+  baseURL: import.meta.env.VITE_APP_API_BASE_URL || 'http://localhost:8081',
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 })
 
-// request 攔截器（可加 token）
+// 請求攔截器
 api.interceptors.request.use(
-  config => {
-    // 例如自動帶 token
-    // const token = localStorage.getItem('token')
-    // if (token) config.headers.Authorization = `Bearer ${token}`
+  (config) => {
+    console.log('🚀 發送請求:', config.url)
     return config
   },
-  error => Promise.reject(error)
+  (error) => {
+    console.error('❌ 請求錯誤:', error)
+    return Promise.reject(error)
+  }
 )
 
-// response 攔截器（統一錯誤處理）
+// 響應攔截器
 api.interceptors.response.use(
-  response => response,
-  error => {
-    // 這裡可統一彈窗、log、導向等
-    // 例如：message.error(error.response?.data?.message || 'API 錯誤')
+  (response) => {
+    console.log('✅ 請求成功:', response.config.url)
+    return response
+  },
+  (error) => {
+    console.error('❌ 響應錯誤:', error)
     return Promise.reject(error)
   }
 )

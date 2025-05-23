@@ -18,14 +18,20 @@ const videoUrl = ref<string>('')
 const handleUpload: UploadProps['customRequest'] = async ({ file }) => {
   if (file instanceof File) {
     console.log("📥 接收到檔案上傳：", file.name)
-    videoFile.value = file
-    videoUrl.value = URL.createObjectURL(file)
-    isProcessing.value = true
-    await callApi(processVideo(file))
-    // TODO: 模擬 AI 處理
-    setTimeout(() => {
-      isProcessing.value = false
-    }, 2000)
+    try {
+      const response = await callApi(processVideo(file))
+      console.log("✅ API 回應：", response)
+      videoFile.value = file
+      videoUrl.value = URL.createObjectURL(file)
+      isProcessing.value = true
+      // TODO: 模擬 AI 處理
+      setTimeout(() => {
+        isProcessing.value = false
+      }, 2000)
+    } catch (error) {
+      console.log("❌ API 錯誤：", error)
+      // 可以加入錯誤處理，例如顯示錯誤訊息
+    }
   }
 }
 
