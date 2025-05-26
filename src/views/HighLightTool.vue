@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { callApi } from '@/utils/callApi'
 import { processVideo } from '@/api/video'
+import VideoTimeline from '@/components/highLightToo/VideoTimeline.vue'
 import {
   ArrowLeftOutlined,
   UploadOutlined,
@@ -10,33 +11,213 @@ import {
 } from '@ant-design/icons-vue'
 import { UploadProps } from 'ant-design-vue'
 
+interface Sentence {
+  text: string
+  startTime: string
+  endTime: string
+  isHighlight: boolean
+}
+
+interface Section {
+  title: string
+  startTime: number
+  endTime: number
+  sentences: Sentence[]
+}
+
+interface TranscriptData {
+  transcript: {
+    sections: Section[]
+  }
+}
+
+interface TimelineSegment {
+  startTime: string
+  endTime: string
+  text: string
+  isHighlight: boolean
+  sectionIndex: number
+  sentenceIndex: number
+}
+
 const router = useRouter()
 const videoFile = ref<File | null>(null)
 const isProcessing = ref(false)
 const videoUrl = ref<string>('')
+const transcriptData = ref<TranscriptData | null>(null)
+const videoRef = ref<HTMLVideoElement>()
+
+// 影片播放狀態
+const isPlaying = ref(false)
+const currentTime = ref(0)
+const videoDuration = ref(0)
+
+// 將時間字串轉換為秒數
+const timeStringToSeconds = (timeStr: string): number => {
+  const [minutes, seconds] = timeStr.split(':').map(Number)
+  return minutes * 60 + seconds
+}
+
+// 獲取所有片段（包含高亮和非高亮）
+const allSegments = computed((): TimelineSegment[] => {
+  if (!transcriptData.value) return []
+
+  const segments: TimelineSegment[] = []
+
+  transcriptData.value.transcript.sections.forEach((section, sectionIndex) => {
+    section.sentences.forEach((sentence, sentenceIndex) => {
+      segments.push({
+        startTime: sentence.startTime,
+        endTime: sentence.endTime,
+        text: sentence.text,
+        isHighlight: sentence.isHighlight,
+        sectionIndex,
+        sentenceIndex
+      })
+    })
+  })
+
+  return segments
+})
+
+// 設置影片事件監聽器
+const setupVideoEvents = () => {
+  if (!videoRef.value) {
+    console.log('❌ videoRef 不存在')
+    return
+  }
+
+  console.log('🎥 設置影片事件監聽器')
+
+  const video = videoRef.value
+
+  // 移除舊的事件監聽器（如果存在）
+  video.removeEventListener('loadedmetadata', onLoadedMetadata)
+  video.removeEventListener('timeupdate', onTimeUpdate)
+  video.removeEventListener('play', onPlay)
+  video.removeEventListener('pause', onPause)
+
+  // 添加新的事件監聽器
+  video.addEventListener('loadedmetadata', onLoadedMetadata)
+  video.addEventListener('timeupdate', onTimeUpdate)
+  video.addEventListener('play', onPlay)
+  video.addEventListener('pause', onPause)
+
+  // 如果影片已經載入，直接設置時長
+  if (video.readyState >= 1) {
+    onLoadedMetadata()
+  }
+}
+
+const onLoadedMetadata = () => {
+  if (videoRef.value) {
+    videoDuration.value = videoRef.value.duration
+    console.log('📹 影片時長:', videoDuration.value)
+  }
+}
+
+const onTimeUpdate = () => {
+  if (videoRef.value) {
+    currentTime.value = videoRef.value.currentTime
+  }
+}
+
+const onPlay = () => {
+  isPlaying.value = true
+  console.log('▶️ 影片開始播放')
+}
+
+const onPause = () => {
+  isPlaying.value = false
+  console.log('⏸️ 影片暫停')
+}
+
+// 監聽 videoUrl 變化，當影片載入後設置事件
+watch(videoUrl, async (newUrl) => {
+  if (newUrl) {
+    console.log('🎬 影片 URL 已設置:', newUrl)
+    await nextTick()
+    // 等待一小段時間確保 DOM 更新完成
+    setTimeout(() => {
+      setupVideoEvents()
+    }, 100)
+  }
+})
 
 const handleUpload: UploadProps['customRequest'] = async ({ file }) => {
   if (file instanceof File) {
-    console.log("📥 接收到檔案上傳：", file.name)
     try {
-      const response = await callApi(processVideo(file))
-      console.log("✅ API 回應：", response)
       videoFile.value = file
-      videoUrl.value = URL.createObjectURL(file)
       isProcessing.value = true
-      // TODO: 模擬 AI 處理
-      setTimeout(() => {
-        isProcessing.value = false
-      }, 2000)
+
+      console.log('📤 開始上傳影片:', file.name)
+
+      const response = await callApi(processVideo(file))
+
+      // 創建影片 URL
+      videoUrl.value = URL.createObjectURL(file)
+      console.log('🎥 影片 URL 已創建')
+
+      // 儲存轉錄資料
+      if (response.data) {
+        transcriptData.value = response.data
+        console.log('✅ 轉錄資料:', transcriptData.value)
+      }
+
     } catch (error) {
       console.log("❌ API 錯誤：", error)
-      // 可以加入錯誤處理，例如顯示錯誤訊息
+    }
+    finally {
+      isProcessing.value = false
     }
   }
 }
 
 const goBack = () => {
   router.push('/')
+}
+
+const toggleHighlight = (sectionIndex: number, sentenceIndex: number) => {
+  if (transcriptData.value) {
+    const sentence = transcriptData.value.transcript.sections[sectionIndex].sentences[sentenceIndex]
+    sentence.isHighlight = !sentence.isHighlight
+    console.log('🎯 切換高亮:', sentence.text, sentence.isHighlight)
+  }
+}
+
+// 影片播放控制
+const togglePlay = () => {
+  if (!videoRef.value) {
+    console.log('❌ 無法控制播放：videoRef 不存在')
+    return
+  }
+
+  console.log('🎮 切換播放狀態，當前:', isPlaying.value)
+
+  if (isPlaying.value) {
+    videoRef.value.pause()
+  } else {
+    videoRef.value.play()
+  }
+}
+
+// 跳轉到指定時間
+const seekTo = (time: number) => {
+  if (!videoRef.value) {
+    console.log('❌ 無法跳轉：videoRef 不存在')
+    return
+  }
+
+  console.log('⏭️ 跳轉到時間:', time)
+  videoRef.value.currentTime = time
+  currentTime.value = time
+}
+
+// 跳轉到片段
+const jumpToSegment = (segment: TimelineSegment) => {
+  const startSeconds = timeStringToSeconds(segment.startTime)
+  seekTo(startSeconds)
+  console.log('🎯 跳轉到片段:', segment.text)
 }
 
 </script>
@@ -67,16 +248,32 @@ const goBack = () => {
                 </a-upload>
               </div>
 
-
               <div v-else class="transcript-section">
                 <div v-if="isProcessing" class="processing-overlay">
                   <a-spin size="large" />
                   <p>正在處理影片...</p>
                 </div>
 
-                <div v-else>
-                  <h2>影片轉錄稿</h2>
-                  <!-- TODO: 添加轉錄稿內容 -->
+                <div v-else-if="transcriptData" class="transcript-content">
+                  <div class="transcript-header">
+                    <h2>Transcript</h2>
+                  </div>
+
+                  <div class="transcript-body">
+                    <div v-for="(section, sectionIndex) in transcriptData.transcript.sections" :key="sectionIndex"
+                      class="section">
+                      <h3 class="section-title">{{ section.title }}</h3>
+
+                      <div class="sentences">
+                        <div v-for="(sentence, sentenceIndex) in section.sentences" :key="sentenceIndex"
+                          class="sentence-item" :class="{ 'highlighted': sentence.isHighlight }"
+                          @click="toggleHighlight(sectionIndex, sentenceIndex)">
+                          <span class="time-stamp">{{ sentence.startTime }}</span>
+                          <span class="sentence-text">{{ sentence.text }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -90,16 +287,18 @@ const goBack = () => {
               </div>
 
               <div v-else class="video-container">
-                <div v-if="isProcessing" class="processing-message">
+                <div v-if="isProcessing" class="processing-overlay">
+                  <a-spin size="large" />
                   <p>正在處理影片...</p>
                 </div>
 
-                <div v-else>
-                  <video :src="videoUrl" controls class="video-player"></video>
+                <div v-else class="video-content">
+                  <video ref="videoRef" :src="videoUrl" controls class="video-player" preload="metadata"></video>
 
-                  <div class="transcript-overlay">
-                    <!-- TODO: 添加轉錄稿覆蓋層 -->
-                  </div>
+                  <!-- 時間軸組件 -->
+                  <VideoTimeline v-if="videoDuration > 0" :segments="allSegments" :video-duration="videoDuration"
+                    :current-time="currentTime" :is-playing="isPlaying" @seek-to="seekTo" @toggle-play="togglePlay"
+                    @jump-to-segment="jumpToSegment" class="timeline-component" />
                 </div>
               </div>
             </div>
@@ -142,15 +341,6 @@ const goBack = () => {
     @include flex(row, space-between, center);
     height: 64px;
 
-    h1 {
-      margin: 0;
-      color: $text-primary;
-      font-weight: 500;
-      background: linear-gradient(90deg, $text-primary 0%, $primary-light 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
     .header-title {
       font-size: 1.5rem;
       font-weight: 600;
@@ -171,7 +361,6 @@ const goBack = () => {
   background: rgba($bg-card, 0.8);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  // border-radius: $border-radius-md;
   overflow: hidden;
   border: 1px solid $border-color;
   box-shadow: $shadow-md;
@@ -186,7 +375,6 @@ const goBack = () => {
 .editor-section {
   @include flex(column, center, center);
   background: #f6f6f6;
-
 }
 
 .upload-wrapper {
@@ -194,7 +382,6 @@ const goBack = () => {
   width: 50%;
   height: 50%;
   color: $primary-dark;
-
 }
 
 .upload-area {
@@ -233,6 +420,93 @@ const goBack = () => {
 
 .transcript-section {
   height: 100%;
+  width: 100%;
+  background: #e8e8e8;
+}
+
+.transcript-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.transcript-header {
+  padding: 20px;
+  background: #e8e8e8;
+  border-bottom: 1px solid #ddd;
+
+  h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #333;
+  }
+}
+
+.transcript-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  margin: 0 0 12px 0;
+  padding: 12px 20px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  background: #e8e8e8;
+  border-bottom: 1px solid #ddd;
+}
+
+.sentences {
+  background: #e8e8e8;
+}
+
+.sentence-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.02);
+  }
+
+  &.highlighted {
+    background: #4285f4;
+    color: white;
+
+    .time-stamp {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    &:hover {
+      background: #3367d6;
+    }
+  }
+}
+
+.time-stamp {
+  min-width: 50px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #666;
+  margin-right: 12px;
+  margin-top: 2px;
+}
+
+.sentence-text {
+  flex: 1;
+  line-height: 1.5;
+  color: #333;
+  font-size: 0.95rem;
 }
 
 .processing-overlay {
@@ -269,24 +543,39 @@ const goBack = () => {
   position: relative;
 }
 
-.video-player {
-  width: 100%;
+.video-content {
   height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-player {
+  flex: 1;
+  width: 100%;
   object-fit: contain;
   background: #000;
 }
 
-.transcript-overlay {
+.timeline-component {
+  flex-shrink: 0;
+  margin: 0;
+  border-radius: 0;
+}
+
+.debug-info {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: $spacing-lg;
-  background: rgba($bg-dark, 0.8);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: $text-primary;
-  border-top: 1px solid $border-color;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 100;
+
+  p {
+    margin: 2px 0;
+  }
 }
 
 :deep(.ant-btn-link) {
