@@ -25,7 +25,19 @@ const isDragging = ref(false)
 const timeToPixel = (time: string) => {
   const [minutes, seconds] = time.split(':').map(Number)
   const totalSeconds = minutes * 60 + seconds
-  return (totalSeconds / props.videoDuration) * 100
+
+  // 確保即使時間超出videoDuration也能正常計算位置
+  if (props.videoDuration <= 0) {
+    console.log('⚠️ 影片時長為0，無法計算位置')
+    return 0
+  }
+
+  const position = (totalSeconds / props.videoDuration) * 100
+
+  // 不限制位置範圍，允許超出100%的位置
+  console.log(`📍 時間 ${time} (${totalSeconds}s) 轉換為位置: ${position}%`)
+
+  return position
 }
 
 // 將時間字串轉換為秒數
@@ -33,6 +45,72 @@ const timeStringToSeconds = (timeStr: string): number => {
   const [minutes, seconds] = timeStr.split(':').map(Number)
   return minutes * 60 + seconds
 }
+
+// 格式化時間顯示
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
+
+// 計算適當的刻度數量，基於影片時長
+const scaleMarks = computed(() => {
+  if (!props.videoDuration || props.videoDuration <= 0) {
+    console.log('⚠️ 時間軸：無有效的影片時長資料')
+    return []
+  }
+
+  console.log('🕐 時間軸：收到的影片時長:', props.videoDuration, '秒')
+  console.log('🕐 時間軸：格式化時長:', formatTime(props.videoDuration))
+
+  // 根據影片時長決定刻度間隔
+  let interval: number
+  let marksCount: number
+
+  if (props.videoDuration <= 60) {
+    // 1分鐘以內，每10秒一個刻度
+    interval = 10
+    marksCount = Math.ceil(props.videoDuration / interval) + 1
+  } else if (props.videoDuration <= 300) {
+    // 5分鐘以內，每30秒一個刻度
+    interval = 30
+    marksCount = Math.ceil(props.videoDuration / interval) + 1
+  } else if (props.videoDuration <= 600) {
+    // 10分鐘以內，每60秒一個刻度
+    interval = 60
+    marksCount = Math.ceil(props.videoDuration / interval) + 1
+  } else {
+    // 10分鐘以上，每120秒一個刻度
+    interval = 120
+    marksCount = Math.ceil(props.videoDuration / interval) + 1
+  }
+
+  console.log('📏 時間軸：刻度間隔:', interval, '秒，刻度數量:', marksCount)
+
+  const marks = []
+  for (let i = 0; i < marksCount; i++) {
+    const timeInSeconds = i * interval
+    if (timeInSeconds <= props.videoDuration) {
+      marks.push({
+        time: timeInSeconds,
+        label: formatTime(timeInSeconds),
+        position: (timeInSeconds / props.videoDuration) * 100
+      })
+    }
+  }
+
+  // 確保最後一個刻度是影片結束時間
+  if (marks.length > 0 && marks[marks.length - 1].time < props.videoDuration) {
+    marks.push({
+      time: props.videoDuration,
+      label: formatTime(props.videoDuration),
+      position: 100
+    })
+  }
+
+  console.log('📏 時間軸刻度生成完成:', marks.map(m => m.label).join(', '))
+  return marks
+})
 
 // 處理片段點擊，跳轉到片段開始時間
 const handleSegmentClick = (segment: TimelineSegment) => {
@@ -50,6 +128,7 @@ const handleTimelineClick = (event: MouseEvent) => {
   const seekTime = percentage * props.videoDuration
 
   emit('seekTo', seekTime)
+  console.log('🎯 點擊時間軸，跳轉到:', formatTime(seekTime))
 }
 </script>
 
@@ -74,10 +153,16 @@ const handleTimelineClick = (event: MouseEvent) => {
 
     <!-- 時間刻度 -->
     <div class="timeline-scale">
-      <div v-for="i in 10" :key="i" class="scale-mark" :style="{ left: (i * 10) + '%' }">
-        {{ Math.floor((i * videoDuration) / 10 / 60) }}:{{ String(Math.floor((i * videoDuration) / 10 % 60)).padStart(2,
-          '0') }}
+      <div v-for="mark in scaleMarks" :key="mark.time" class="scale-mark" :style="{ left: mark.position + '%' }">
+        {{ mark.label }}
       </div>
+    </div>
+
+    <!-- 調試信息 -->
+    <div v-if="false" class="debug-timeline">
+      <p>影片時長: {{ formatTime(videoDuration) }} ({{ videoDuration }}秒)</p>
+      <p>當前時間: {{ formatTime(currentTime) }}</p>
+      <p>片段數量: {{ segments.length }}</p>
     </div>
   </div>
 </template>
@@ -90,11 +175,12 @@ const handleTimelineClick = (event: MouseEvent) => {
 
 .timeline-container {
   position: relative;
-  height: 60px;
+  height: 46px;
   background: #f0f0f0;
   border-radius: 8px;
   cursor: pointer;
-  overflow: hidden;
+  overflow-x: visible;
+  min-width: 100%;
 }
 
 .timeline-track {
@@ -105,34 +191,39 @@ const handleTimelineClick = (event: MouseEvent) => {
 
 .timeline-segment {
   position: absolute;
-  top: 10px;
-  height: 40px;
+  top: 8px;
+  height: 30px;
   background: rgba(66, 133, 244, 0.3);
   border: 2px solid #4285f4;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-width: 2px;
+  z-index: 5;
 
   &.highlighted {
     background: rgba(66, 133, 244, 0.8);
     border-color: #3367d6;
+    z-index: 6;
   }
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 7;
   }
 }
 
 .segment-label {
   padding: 2px 6px;
-  font-size: 12px;
+  font-size: 11px;
   color: white;
   background: rgba(0, 0, 0, 0.7);
   border-radius: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .playhead {
@@ -165,8 +256,23 @@ const handleTimelineClick = (event: MouseEvent) => {
 
 .scale-mark {
   position: absolute;
-  font-size: 12px;
+  font-size: 11px;
   color: #666;
   transform: translateX(-50%);
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.debug-timeline {
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  font-size: 12px;
+
+  p {
+    margin: 2px 0;
+    color: #666;
+  }
 }
 </style>

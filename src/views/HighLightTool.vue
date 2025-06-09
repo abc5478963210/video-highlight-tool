@@ -27,6 +27,7 @@ interface Section {
 }
 
 interface TranscriptData {
+  videoDuration?: number // API回傳的影片總時長（秒）
   transcript: {
     sections: Section[]
   }
@@ -52,12 +53,64 @@ const videoRef = ref<HTMLVideoElement>()
 const isPlaying = ref(false)
 const currentTime = ref(0)
 const videoDuration = ref(0)
+// 從API資料獲取的影片時長
+const apiVideoDuration = ref(0)
 
 // 將時間字串轉換為秒數
 const timeStringToSeconds = (timeStr: string): number => {
   const [minutes, seconds] = timeStr.split(':').map(Number)
   return minutes * 60 + seconds
 }
+
+// 從API回傳的transcript資料中計算影片時長（備用方法）
+const calculateVideoDurationFromApi = (data: TranscriptData): number => {
+  if (!data || !data.transcript.sections.length) {
+    console.log('❌ API資料為空，無法計算時長')
+    return 0
+  }
+
+  let maxTime = 0
+  console.log('📊 備用方法：從transcript計算影片時長...')
+
+  // 遍歷所有section找到最大的endTime
+  data.transcript.sections.forEach((section) => {
+    if (section.endTime > maxTime) {
+      maxTime = section.endTime
+    }
+
+    // 也檢查sentence的endTime
+    section.sentences.forEach((sentence) => {
+      const sentenceEndSeconds = timeStringToSeconds(sentence.endTime)
+      if (sentenceEndSeconds > maxTime) {
+        maxTime = sentenceEndSeconds
+      }
+    })
+  })
+
+  const formattedTime = Math.floor(maxTime / 60) + ':' + String(Math.floor(maxTime % 60)).padStart(2, '0')
+  console.log('📊 從transcript計算得出的影片時長:', maxTime, '秒 (', formattedTime, ')')
+
+  return maxTime
+}
+
+// 獲取實際使用的影片時長（API優先）
+const actualVideoDuration = computed(() => {
+  // 第一優先：API直接回傳的videoDuration
+  if (apiVideoDuration.value > 0) {
+    const source = transcriptData.value?.videoDuration ? 'API直接回傳' : 'transcript計算'
+    console.log(`📡 使用${source}的影片時長:`, apiVideoDuration.value, '秒')
+    return apiVideoDuration.value
+  }
+
+  // 第二優先：瀏覽器解析的影片時長（備用）
+  if (videoDuration.value > 0) {
+    console.log('🎥 使用瀏覽器解析的影片時長:', videoDuration.value, '秒')
+    return videoDuration.value
+  }
+
+  console.log('⚠️ 無可用的影片時長資料')
+  return 0
+})
 
 // 獲取所有片段（包含高亮和非高亮）
 const allSegments = computed((): TimelineSegment[] => {
@@ -113,7 +166,16 @@ const setupVideoEvents = () => {
 const onLoadedMetadata = () => {
   if (videoRef.value) {
     videoDuration.value = videoRef.value.duration
-    console.log('📹 影片時長:', videoDuration.value)
+    console.log('📹 影片時長:', videoDuration.value, '秒')
+    console.log('📹 影片時長格式化:', Math.floor(videoDuration.value / 60) + ':' + String(Math.floor(videoDuration.value % 60)).padStart(2, '0'))
+    console.log('📹 影片準備狀態:', videoRef.value.readyState)
+
+    // 確認影片元數據已完全載入
+    if (videoRef.value.duration && videoRef.value.duration > 0) {
+      console.log('✅ 影片元數據已正確載入')
+    } else {
+      console.log('⚠️ 影片時長獲取異常:', videoRef.value.duration)
+    }
   }
 }
 
@@ -163,6 +225,20 @@ const handleUpload: UploadProps['customRequest'] = async ({ file }) => {
       if (response.data) {
         transcriptData.value = response.data
         console.log('✅ 轉錄資料:', transcriptData.value)
+
+        // 優先使用API直接回傳的影片時長
+        if (response.data.videoDuration) {
+          apiVideoDuration.value = response.data.videoDuration
+          console.log('✅ API直接回傳影片時長:', apiVideoDuration.value, '秒')
+
+          const formattedTime = Math.floor(apiVideoDuration.value / 60) + ':' + String(Math.floor(apiVideoDuration.value % 60)).padStart(2, '0')
+          console.log('📊 API判斷的影片時長:', formattedTime)
+          console.log('🎯 這個時長是API動態分析影片後的結果')
+        } else {
+          // 備用：從transcript資料計算影片時長
+          apiVideoDuration.value = calculateVideoDurationFromApi(response.data)
+          console.log('🔄 API未直接回傳時長，從transcript計算:', apiVideoDuration.value, '秒')
+        }
       }
 
     } catch (error) {
@@ -182,7 +258,14 @@ const toggleHighlight = (sectionIndex: number, sentenceIndex: number) => {
   if (transcriptData.value) {
     const sentence = transcriptData.value.transcript.sections[sectionIndex].sentences[sentenceIndex]
     sentence.isHighlight = !sentence.isHighlight
-    console.log('🎯 切換高亮:', sentence.text, sentence.isHighlight)
+
+    console.log('🎯 切換高亮標記:')
+    console.log('  📝 句子:', sentence.text)
+    console.log('  ⏰ 時間:', sentence.startTime, '-', sentence.endTime)
+    console.log('  🎨 高亮狀態:', sentence.isHighlight)
+    console.log('  🚀 無時間限制：任何句子都可以標記為高亮')
+  } else {
+    console.log('❌ 無transcript資料，無法切換高亮')
   }
 }
 
@@ -216,9 +299,23 @@ const seekTo = (time: number) => {
     return
   }
 
-  console.log('⏭️ 跳轉到時間:', time)
-  videoRef.value.currentTime = time
-  currentTime.value = time
+  console.log('⏭️ 跳轉到時間:', time, '秒')
+  console.log('📊 API時長:', apiVideoDuration.value, '實際影片時長:', videoDuration.value)
+
+  // 移除所有時間限制，允許跳轉到任何時間點
+  console.log('🚀 無限制跳轉模式：允許跳轉到任何API定義的時間點')
+
+  // 執行跳轉，不做任何時間範圍檢查
+  try {
+    videoRef.value.currentTime = time
+    currentTime.value = time
+    console.log('✅ 已跳轉到時間:', time, '秒（無時間限制）')
+  } catch (error) {
+    console.log('⚠️ 跳轉超出影片範圍但這是允許的:', error)
+    // 即使跳轉失敗，仍然更新currentTime以支持UI顯示
+    currentTime.value = time
+    console.log('🔄 已更新UI時間指示器到:', time, '秒')
+  }
 }
 
 // 跳轉到片段
@@ -245,6 +342,7 @@ const clearAll = () => {
   isPlaying.value = false
   currentTime.value = 0
   videoDuration.value = 0
+  apiVideoDuration.value = 0 // 重置API時長
   isProcessing.value = false
 
   // 清空影片元素
@@ -326,9 +424,10 @@ const clearAll = () => {
                   <video ref="videoRef" :src="videoUrl" controls class="video-player" preload="metadata"></video>
 
                   <!-- 時間軸組件 -->
-                  <VideoTimeline v-if="videoDuration > 0" :segments="allSegments" :video-duration="videoDuration"
-                    :current-time="currentTime" :is-playing="isPlaying" @seek-to="seekTo" @toggle-play="togglePlay"
-                    @jump-to-segment="jumpToSegment" class="timeline-component" />
+                  <VideoTimeline v-if="actualVideoDuration > 0" :segments="allSegments"
+                    :video-duration="actualVideoDuration" :current-time="currentTime" :is-playing="isPlaying"
+                    @seek-to="seekTo" @toggle-play="togglePlay" @jump-to-segment="jumpToSegment"
+                    class="timeline-component" />
                 </div>
               </div>
             </div>
@@ -617,26 +716,58 @@ const clearAll = () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.video-player {
-  flex: 1;
-  width: 100%;
-  object-fit: contain;
-  background: #000;
+  gap: 0;
+  /* 移除元素間的間距 */
 }
 
 .timeline-component {
   flex-shrink: 0;
+  /* 不縮小，保持固定大小 */
+  height: auto;
+  /* 自動高度 */
   margin: 0;
   border-radius: 0;
 
   // 直立模式下調整時間軸高度
   @media (orientation: portrait),
   (max-width: 767px) {
+    min-height: 60px;
+    /* 直立模式下的最小高度 */
+
     :deep(.timeline-container) {
-      height: 60px; // 減少高度以節省空間
+      height: auto;
+      /* 自動高度適應 */
+      min-height: 46px;
+      /* 保證最小高度 */
     }
+  }
+}
+
+.video-player {
+  flex: 1;
+  /* 占滿剩餘空間 */
+  width: 100%;
+  max-height: calc(100vh - 200px);
+  /* 最大高度避免超出螢幕 */
+  min-height: 300px;
+  /* 最小高度保證可用性 */
+  object-fit: contain;
+  background: #000;
+
+  // 響應式調整
+  @media (orientation: portrait),
+  (max-width: 767px) {
+    min-height: 200px;
+    /* 直立模式下的最小高度 */
+    max-height: calc(50vh - 100px);
+    /* 直立模式下的最大高度 */
+  }
+
+  // 小螢幕進一步調整
+  @media (max-width: 480px) {
+    min-height: 180px;
+    /* 更小螢幕的最小高度 */
+    max-height: calc(50vh - 80px);
   }
 }
 

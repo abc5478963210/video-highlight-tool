@@ -35,6 +35,10 @@ paths:
                   data:
                     type: object
                     properties:
+                      videoDuration:
+                        type: number
+                        example: 33
+                        description: 影片總時長（秒）- 動態根據實際影片判斷
                       transcript:
                         type: object
                         properties:
@@ -84,7 +88,7 @@ paths:
                                     isHighlight: true
                               - title: "Key Features"
                                 startTime: 15
-                                endTime: 40
+                                endTime: 30
                                 sentences:
                                   - text: "Our product has three main features."
                                     startTime: "00:15"
@@ -97,43 +101,7 @@ paths:
                                   - text: "Second, it's highly efficient."
                                     startTime: "00:25"
                                     endTime: "00:30"
-                                    isHighlight: false
-                                  - text: "And third, it's cost-effective."
-                                    startTime: "00:30"
-                                    endTime: "00:40"
-                                    isHighlight: false
-                              - title: "Demonstration"
-                                startTime: 40
-                                endTime: 60
-                                sentences:
-                                  - text: "Let me show you how it works."
-                                    startTime: "00:40"
-                                    endTime: "00:45"
-                                    isHighlight: false
-                                  - text: "Simply press this button to start."
-                                    startTime: "00:45"
-                                    endTime: "00:50"
                                     isHighlight: true
-                                  - text: "The interface is intuitive and user-friendly."
-                                    startTime: "00:50"
-                                    endTime: "01:00"
-                                    isHighlight: true
-                              - title: "Conclusion"
-                                startTime: 60
-                                endTime: 80
-                                sentences:
-                                  - text: "In conclusion, our product is a game-changer."
-                                    startTime: "01:00"
-                                    endTime: "01:05"
-                                    isHighlight: false
-                                  - text: "We're excited to bring this to market."
-                                    startTime: "01:05"
-                                    endTime: "01:10"
-                                    isHighlight: true
-                                  - text: "Thank you for your attention."
-                                    startTime: "01:10"
-                                    endTime: "01:20"
-                                    isHighlight: false
                   message:
                     type: string
                     example: 處理成功
@@ -175,23 +143,90 @@ paths:
                   data:
                     type: object
                     properties:
-                      success:
-                        type: boolean
-                        example: true
-                      highlights:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            startTime:
-                              type: string
-                              example: "00:05"
-                            endTime:
-                              type: string
-                              example: "00:15"
-                            text:
-                              type: string
-                              example: "Today, we'll be showcasing our latest innovation."
+                      videoDuration:
+                        type: number
+                        example: 33
+                        description: 影片總時長（秒）- 動態根據實際影片判斷
+                      transcript:
+                        type: object
+                        properties:
+                          sections:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                title:
+                                  type: string
+                                  example: Introduction
+                                startTime:
+                                  type: integer
+                                  example: 0
+                                endTime:
+                                  type: integer
+                                  example: 15
+                                sentences:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      text:
+                                        type: string
+                                        example: Welcome to our product demonstration.
+                                      startTime:
+                                        type: string
+                                        example: "00:00"
+                                      endTime:
+                                        type: string
+                                        example: "00:05"
+                                      isHighlight:
+                                        type: boolean
+                                        example: false
+                            example:
+                              - title: "Introduction"
+                                startTime: 0
+                                endTime: 15
+                                sentences:
+                                  - text: "Welcome to our product demonstration."
+                                    startTime: "00:00"
+                                    endTime: "00:05"
+                                    isHighlight: false
+                                  - text: "Today, we'll be showcasing our latest innovation."
+                                    startTime: "00:05"
+                                    endTime: "00:15"
+                                    isHighlight: true
+                              - title: "Key Features"
+                                startTime: 15
+                                endTime: 30
+                                sentences:
+                                  - text: "Our product has three main features."
+                                    startTime: "00:15"
+                                    endTime: "00:20"
+                                    isHighlight: false
+                                  - text: "First, it's incredibly easy to use."
+                                    startTime: "00:20"
+                                    endTime: "00:25"
+                                    isHighlight: false
+                                  - text: "Second, it's highly efficient."
+                                    startTime: "00:25"
+                                    endTime: "00:30"
+                                    isHighlight: true
+                  success:
+                    type: boolean
+                    example: true
+                  highlights:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        startTime:
+                          type: string
+                          example: "00:05"
+                        endTime:
+                          type: string
+                          example: "00:15"
+                        text:
+                          type: string
+                          example: "Today, we'll be showcasing our latest innovation."
                   message:
                     type: string
                     example: 保存成功

@@ -71,10 +71,22 @@ const handleSentenceClick = (sectionIndex: number, sentenceIndex: number) => {
   if (props.transcriptData) {
     const sentence = props.transcriptData.transcript.sections[sectionIndex].sentences[sentenceIndex]
 
-    // 只跳轉到對應時間，不再處理高亮
-    emit('jump-to-time', sentence.startTime)
+    console.log('📝 transcript點擊事件 - section:', sectionIndex, 'sentence:', sentenceIndex)
+    console.log('📝 transcript點擊事件 - 句子:', sentence.text)
+    console.log('📝 transcript點擊事件 - 開始時間:', sentence.startTime)
+    console.log('📝 transcript點擊事件 - 結束時間:', sentence.endTime)
 
-    console.log('🎯 點擊句子:', sentence.text, '時間:', sentence.startTime)
+    // 驗證時間格式
+    if (!sentence.startTime || sentence.startTime === '') {
+      console.log('❌ 無效的開始時間')
+      return
+    }
+
+    // 執行跳轉（無論如何都要嘗試跳轉）
+    emit('jump-to-time', sentence.startTime)
+    console.log('✅ transcript跳轉事件已發送 - 時間:', sentence.startTime)
+  } else {
+    console.log('❌ transcript資料不存在')
   }
 }
 
