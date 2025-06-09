@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { callApi } from '@/utils/callApi'
 import { processVideo } from '@/api/video'
 import VideoTimeline from '@/components/highLightToo/VideoTimeline.vue'
+import TranscriptViewer from '@/components/highLightToo/TranscriptViewer.vue'
 import {
   ArrowLeftOutlined,
   UploadOutlined,
@@ -185,6 +186,13 @@ const toggleHighlight = (sectionIndex: number, sentenceIndex: number) => {
   }
 }
 
+// 處理從組件傳來的跳轉時間事件
+const handleJumpToTime = (timeString: string) => {
+  const startSeconds = timeStringToSeconds(timeString)
+  seekTo(startSeconds)
+  console.log('⏭️ 跳轉到時間:', timeString, '(', startSeconds, '秒)')
+}
+
 // 影片播放控制
 const togglePlay = () => {
   if (!videoRef.value) {
@@ -220,6 +228,34 @@ const jumpToSegment = (segment: TimelineSegment) => {
   console.log('🎯 跳轉到片段:', segment.text)
 }
 
+const clearAll = () => {
+  console.log('🗑️ 清空所有資料')
+
+  // 清空檔案和URL
+  videoFile.value = null
+  if (videoUrl.value) {
+    URL.revokeObjectURL(videoUrl.value) // 釋放記憶體
+  }
+  videoUrl.value = ''
+
+  // 清空轉錄資料
+  transcriptData.value = null
+
+  // 重置影片播放狀態
+  isPlaying.value = false
+  currentTime.value = 0
+  videoDuration.value = 0
+  isProcessing.value = false
+
+  // 清空影片元素
+  if (videoRef.value) {
+    videoRef.value.src = ''
+    videoRef.value.load() // 重載影片元素
+  }
+
+  console.log('✅ 已清空所有資料')
+}
+
 </script>
 
 <template>
@@ -229,7 +265,7 @@ const jumpToSegment = (segment: TimelineSegment) => {
         <div class="header-content">
           <a-button type="link" @click="goBack">
             <template #icon><arrow-left-outlined /></template>
-            返回
+            back
           </a-button>
           <span class="header-title">Video Highlight Tool</span>
         </div>
@@ -254,27 +290,8 @@ const jumpToSegment = (segment: TimelineSegment) => {
                   <p>正在處理影片...</p>
                 </div>
 
-                <div v-else-if="transcriptData" class="transcript-content">
-                  <div class="transcript-header">
-                    <h2>Transcript</h2>
-                  </div>
-
-                  <div class="transcript-body">
-                    <div v-for="(section, sectionIndex) in transcriptData.transcript.sections" :key="sectionIndex"
-                      class="section">
-                      <h3 class="section-title">{{ section.title }}</h3>
-
-                      <div class="sentences">
-                        <div v-for="(sentence, sentenceIndex) in section.sentences" :key="sentenceIndex"
-                          class="sentence-item" :class="{ 'highlighted': sentence.isHighlight }"
-                          @click="toggleHighlight(sectionIndex, sentenceIndex)">
-                          <span class="time-stamp">{{ sentence.startTime }}</span>
-                          <span class="sentence-text">{{ sentence.text }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <TranscriptViewer v-else :transcript-data="transcriptData" :current-time="currentTime"
+                  @toggle-highlight="toggleHighlight" @jump-to-time="handleJumpToTime" />
               </div>
             </div>
           </a-col>
@@ -287,6 +304,19 @@ const jumpToSegment = (segment: TimelineSegment) => {
               </div>
 
               <div v-else class="video-container">
+                <!-- 新增關閉按鈕 -->
+                <div class="video-header">
+                  <a-button @click="clearAll" class="close-button">
+                    <template #icon>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                        <path
+                          d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                      </svg>
+                    </template>
+                    close
+                  </a-button>
+                </div>
+
                 <div v-if="isProcessing" class="processing-overlay">
                   <a-spin size="large" />
                   <p>正在處理影片...</p>
@@ -424,91 +454,6 @@ const jumpToSegment = (segment: TimelineSegment) => {
   background: #e8e8e8;
 }
 
-.transcript-content {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.transcript-header {
-  padding: 20px;
-  background: #e8e8e8;
-  border-bottom: 1px solid #ddd;
-
-  h2 {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #333;
-  }
-}
-
-.transcript-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0;
-}
-
-.section {
-  margin-bottom: 24px;
-}
-
-.section-title {
-  margin: 0 0 12px 0;
-  padding: 12px 20px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #333;
-  background: #e8e8e8;
-  border-bottom: 1px solid #ddd;
-}
-
-.sentences {
-  background: #e8e8e8;
-}
-
-.sentence-item {
-  display: flex;
-  align-items: flex-start;
-  padding: 8px 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.02);
-  }
-
-  &.highlighted {
-    background: #4285f4;
-    color: white;
-
-    .time-stamp {
-      color: rgba(255, 255, 255, 0.9);
-    }
-
-    &:hover {
-      background: #3367d6;
-    }
-  }
-}
-
-.time-stamp {
-  min-width: 50px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: #666;
-  margin-right: 12px;
-  margin-top: 2px;
-}
-
-.sentence-text {
-  flex: 1;
-  line-height: 1.5;
-  color: #333;
-  font-size: 0.95rem;
-}
-
 .processing-overlay {
   @include flex(column, center, center);
   position: absolute;
@@ -541,6 +486,34 @@ const jumpToSegment = (segment: TimelineSegment) => {
 .video-container {
   height: 100%;
   position: relative;
+}
+
+.video-header {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+}
+
+.close-button {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(220, 53, 69, 0.8);
+    color: white;
+  }
+
+  svg {
+    margin-right: 4px;
+  }
 }
 
 .video-content {

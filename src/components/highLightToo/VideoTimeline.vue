@@ -28,6 +28,19 @@ const timeToPixel = (time: string) => {
   return (totalSeconds / props.videoDuration) * 100
 }
 
+// 將時間字串轉換為秒數
+const timeStringToSeconds = (timeStr: string): number => {
+  const [minutes, seconds] = timeStr.split(':').map(Number)
+  return minutes * 60 + seconds
+}
+
+// 處理片段點擊，跳轉到片段開始時間
+const handleSegmentClick = (segment: TimelineSegment) => {
+  const startSeconds = timeStringToSeconds(segment.startTime)
+  emit('seekTo', startSeconds)
+  console.log('🎯 點擊片段，跳轉到時間:', segment.startTime, '(', startSeconds, '秒)')
+}
+
 const handleTimelineClick = (event: MouseEvent) => {
   if (!timelineRef.value) return
 
@@ -51,8 +64,8 @@ const handleTimelineClick = (event: MouseEvent) => {
         :class="{ 'highlighted': segment.isHighlight }" :style="{
           left: timeToPixel(segment.startTime) + '%',
           width: (timeToPixel(segment.endTime) - timeToPixel(segment.startTime)) + '%'
-        }" @click.stop="emit('updateSegment', index, segment)">
-        <div class="segment-label">{{ segment.text }}</div>
+        }" @click.stop="handleSegmentClick(segment)">
+        <div class="segment-label">{{ segment.startTime }}</div>
       </div>
 
       <!-- 播放進度指示器 -->
