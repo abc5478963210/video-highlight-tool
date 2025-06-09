@@ -272,8 +272,8 @@ const clearAll = () => {
       </a-layout-header>
 
       <a-layout-content class="content">
-        <a-row :gutter="16">
-          <a-col :span="12">
+        <a-row :gutter="16" class="main-row">
+          <a-col :xs="24" :sm="24" :md="12" :lg="12" :xl="12" class="editor-col">
             <div class="editor-section">
               <div v-if="!videoFile" class="upload-wrapper">
                 <a-upload :customRequest="handleUpload" :showUploadList="false" accept="video/*" class="upload-area">
@@ -296,7 +296,7 @@ const clearAll = () => {
             </div>
           </a-col>
 
-          <a-col :span="12">
+          <a-col :xs="24" :sm="24" :md="12" :lg="12" :xl="12" class="preview-col">
             <div class="preview-section">
               <div v-if="!videoFile" class="empty-state">
                 <video-camera-outlined class="preview-icon" />
@@ -385,9 +385,60 @@ const clearAll = () => {
   z-index: 1;
 }
 
+// RWD 響應式設計
+.main-row {
+  height: calc(100vh - 96px);
+
+  // 桌面版 - 橫向排列
+  @media (min-width: 768px) and (orientation: landscape) {
+    display: flex;
+    flex-direction: row;
+
+    .editor-col {
+      order: 1;
+    }
+
+    .preview-col {
+      order: 2;
+    }
+  }
+
+  // 直立模式 - 調整順序
+  @media (orientation: portrait),
+  (max-width: 767px) {
+    display: flex;
+    flex-direction: column;
+
+    .editor-col {
+      order: 2; // editor 移到下方
+      height: 50%;
+    }
+
+    .preview-col {
+      order: 1; // preview 移到上方
+      height: 50%;
+    }
+  }
+
+  // 手機橫向
+  @media (max-width: 767px) and (orientation: landscape) {
+    flex-direction: row;
+
+    .editor-col {
+      order: 1;
+      height: 100%;
+    }
+
+    .preview-col {
+      order: 2;
+      height: 100%;
+    }
+  }
+}
+
 .editor-section,
 .preview-section {
-  height: calc(100vh - 96px);
+  height: 100%;
   background: rgba($bg-card, 0.8);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -399,6 +450,17 @@ const clearAll = () => {
   &:hover {
     box-shadow: $shadow-lg;
     border-color: rgba($primary-color, 0.3);
+  }
+
+  // 直立模式下的高度調整
+  @media (orientation: portrait),
+  (max-width: 767px) {
+    height: calc(50vh - 48px);
+  }
+
+  // 桌面版高度
+  @media (min-width: 768px) and (orientation: landscape) {
+    height: calc(100vh - 96px);
   }
 }
 
@@ -412,6 +474,13 @@ const clearAll = () => {
   width: 50%;
   height: 50%;
   color: $primary-dark;
+
+  // 響應式調整
+  @media (orientation: portrait),
+  (max-width: 767px) {
+    width: 80%;
+    height: 60%;
+  }
 }
 
 .upload-area {
@@ -435,11 +504,24 @@ const clearAll = () => {
   .upload-icon {
     font-size: 3rem;
     color: $primary-color;
+
+    // 響應式調整圖示大小
+    @media (orientation: portrait),
+    (max-width: 767px) {
+      font-size: 2rem;
+    }
   }
 
   p {
     color: $primary-dark;
     font-weight: 600;
+    text-align: center;
+
+    // 響應式調整文字大小
+    @media (orientation: portrait),
+    (max-width: 767px) {
+      font-size: 0.9rem;
+    }
   }
 
   &:hover {
@@ -480,6 +562,21 @@ const clearAll = () => {
   .preview-icon {
     font-size: 3rem;
     color: $primary-color;
+
+    // 響應式調整圖示大小
+    @media (orientation: portrait),
+    (max-width: 767px) {
+      font-size: 2rem;
+    }
+  }
+
+  p {
+
+    // 響應式調整文字大小
+    @media (orientation: portrait),
+    (max-width: 767px) {
+      font-size: 0.9rem;
+    }
   }
 }
 
@@ -533,6 +630,14 @@ const clearAll = () => {
   flex-shrink: 0;
   margin: 0;
   border-radius: 0;
+
+  // 直立模式下調整時間軸高度
+  @media (orientation: portrait),
+  (max-width: 767px) {
+    :deep(.timeline-container) {
+      height: 60px; // 減少高度以節省空間
+    }
+  }
 }
 
 .debug-info {
@@ -560,6 +665,27 @@ const clearAll = () => {
 
   .anticon {
     color: $primary-color;
+  }
+}
+
+// 針對 Ant Design Row 的額外樣式調整
+:deep(.ant-row) {
+  height: 100%;
+
+  @media (orientation: portrait),
+  (max-width: 767px) {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+}
+
+:deep(.ant-col) {
+
+  @media (orientation: portrait),
+  (max-width: 767px) {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
   }
 }
 </style>
