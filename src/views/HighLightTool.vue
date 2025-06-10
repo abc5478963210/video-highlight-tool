@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { callApi } from '@/utils/callApi'
 import { processVideo } from '@/api/video'
@@ -484,57 +484,6 @@ const clearAll = () => {
   z-index: 1;
 }
 
-// RWD 響應式設計
-.main-row {
-  height: calc(100vh - 96px);
-
-  // 桌面版 - 橫向排列
-  @media (min-width: 768px) and (orientation: landscape) {
-    display: flex;
-    flex-direction: row;
-
-    .editor-col {
-      order: 1;
-    }
-
-    .preview-col {
-      order: 2;
-    }
-  }
-
-  // 直立模式 - 調整順序
-  @media (orientation: portrait),
-  (max-width: 767px) {
-    display: flex;
-    flex-direction: column;
-
-    .editor-col {
-      order: 2; // editor 移到下方
-      height: 50%;
-    }
-
-    .preview-col {
-      order: 1; // preview 移到上方
-      height: 50%;
-    }
-  }
-
-  // 手機橫向
-  @media (max-width: 767px) and (orientation: landscape) {
-    flex-direction: row;
-
-    .editor-col {
-      order: 1;
-      height: 100%;
-    }
-
-    .preview-col {
-      order: 2;
-      height: 100%;
-    }
-  }
-}
-
 .editor-section,
 .preview-section {
   height: 100%;
@@ -560,6 +509,14 @@ const clearAll = () => {
   // 桌面版高度
   @media (min-width: 768px) and (orientation: landscape) {
     height: calc(100vh - 96px);
+  }
+
+  // 手機橫向特別處理
+  @media (max-width: 767px) and (orientation: landscape) {
+    height: calc(100vh - 80px);
+    /* 減少header等佔用空間 */
+    overflow-y: auto;
+    /* 允許滾動以防內容過多 */
   }
 }
 
@@ -741,6 +698,38 @@ const clearAll = () => {
       /* 保證最小高度 */
     }
   }
+
+  // 手機橫向特別處理 - 確保時間軸有足夠空間
+  @media (max-width: 767px) and (orientation: landscape) {
+    min-height: 120px;
+    /* 手機橫向確保足夠高度 */
+    max-height: 200px;
+    /* 限制最大高度 */
+    height: 120px;
+    /* 固定高度 */
+    background: rgba(0, 0, 0, 0.8);
+    /* 增加背景確保可見性 */
+
+    :deep(.timeline-container) {
+      height: 80px;
+      /* 固定高度確保可見 */
+      min-height: 80px;
+      padding: 10px;
+    }
+
+    :deep(.timeline-scale) {
+      height: 30px;
+      /* 刻度區域高度 */
+      margin-top: 10px;
+      font-size: 12px;
+    }
+
+    :deep(.timeline-segments) {
+      height: 40px;
+      /* 片段區域高度 */
+      margin-bottom: 10px;
+    }
+  }
 }
 
 .video-player {
@@ -749,7 +738,7 @@ const clearAll = () => {
   width: 100%;
   max-height: calc(100vh - 200px);
   /* 最大高度避免超出螢幕 */
-  min-height: 300px;
+  // min-height: 300px;
   /* 最小高度保證可用性 */
   object-fit: contain;
   background: #000;
@@ -763,8 +752,18 @@ const clearAll = () => {
     /* 直立模式下的最大高度 */
   }
 
+  // 手機橫向特別處理 - 更嚴格的高度限制
+  @media (max-width: 767px) and (orientation: landscape) {
+    max-height: calc(100vh - 200px);
+    /* 為時間軸預留200px空間 */
+    height: calc(100vh - 200px);
+    /* 強制設定高度 */
+    flex: none;
+    /* 不使用flex，強制固定大小 */
+  }
+
   // 小螢幕進一步調整
-  @media (max-width: 480px) {
+  @media (max-width: 480px) and (orientation: portrait) {
     min-height: 180px;
     /* 更小螢幕的最小高度 */
     max-height: calc(50vh - 80px);
@@ -817,6 +816,58 @@ const clearAll = () => {
     width: 100% !important;
     max-width: 100% !important;
     flex: none !important;
+  }
+}
+
+.main-row {
+  height: calc(100vh - 96px);
+
+  // 桌面版 - 橫向排列
+  @media (min-width: 768px) {
+    display: flex;
+    flex-direction: row;
+
+    .editor-col {
+      order: 1;
+      height: 100%;
+    }
+
+    .preview-col {
+      order: 2;
+      height: 100%;
+    }
+  }
+
+  // 手機橫向
+  @media (max-width: 767px) and (orientation: landscape) {
+    display: flex;
+    flex-direction: row;
+
+    .editor-col {
+      order: 1;
+      height: 100%;
+    }
+
+    .preview-col {
+      order: 2;
+      height: 100%;
+    }
+  }
+
+  // 手機直立
+  @media (max-width: 767px) and (orientation: portrait) {
+    display: flex;
+    flex-direction: column;
+
+    .editor-col {
+      order: 2;
+      height: 50%;
+    }
+
+    .preview-col {
+      order: 1;
+      height: 50%;
+    }
   }
 }
 </style>
