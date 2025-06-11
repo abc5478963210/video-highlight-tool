@@ -210,23 +210,23 @@ paths:
                                     startTime: "00:25"
                                     endTime: "00:30"
                                     isHighlight: true
-                  success:
-                    type: boolean
-                    example: true
-                  highlights:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        startTime:
-                          type: string
-                          example: "00:05"
-                        endTime:
-                          type: string
-                          example: "00:15"
-                        text:
-                          type: string
-                          example: "Today, we'll be showcasing our latest innovation."
+                      success:
+                        type: boolean
+                        example: true
+                      highlights:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            startTime:
+                              type: string
+                              example: "00:05"
+                            endTime:
+                              type: string
+                              example: "00:15"
+                            text:
+                              type: string
+                              example: "Today, we'll be showcasing our latest innovation."
                   message:
                     type: string
                     example: 保存成功

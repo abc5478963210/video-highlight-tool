@@ -5,12 +5,9 @@ import { callApi } from '@/utils/callApi'
 import { processVideo } from '@/api/video'
 import VideoTimeline from '@/components/highLightToo/VideoTimeline.vue'
 import TranscriptViewer from '@/components/highLightToo/TranscriptViewer.vue'
-import {
-  ArrowLeftOutlined,
-  UploadOutlined,
-  VideoCameraOutlined
-} from '@ant-design/icons-vue'
+import { UploadOutlined } from '@ant-design/icons-vue'
 import { UploadProps } from 'ant-design-vue'
+import Nav from '@/components/common/Nav.vue'
 
 interface Sentence {
   text: string
@@ -250,9 +247,7 @@ const handleUpload: UploadProps['customRequest'] = async ({ file }) => {
   }
 }
 
-const goBack = () => {
-  router.push('/')
-}
+
 
 const toggleHighlight = (sectionIndex: number, sentenceIndex: number) => {
   if (transcriptData.value) {
@@ -359,16 +354,7 @@ const clearAll = () => {
 <template>
   <div class="highlight-tool">
     <a-layout class="layout">
-      <a-layout-header class="header">
-        <div class="header-content">
-          <a-button type="link" @click="goBack">
-            <template #icon><arrow-left-outlined /></template>
-            back
-          </a-button>
-          <span class="header-title">Video Highlight Tool</span>
-        </div>
-      </a-layout-header>
-
+      <Nav />
       <a-layout-content class="content">
         <a-row :gutter="16" class="main-row">
           <a-col :xs="24" :sm="24" :md="12" :lg="12" :xl="12" class="editor-col">
