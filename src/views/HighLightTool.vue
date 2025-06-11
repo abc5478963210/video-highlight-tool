@@ -822,52 +822,74 @@ const clearAll = () => {
 .main-row {
   height: calc(100vh - 96px);
 
-  // 桌面版 - 橫向排列
-  @media (min-width: 768px) {
-    display: flex;
-    flex-direction: row;
+  // 橫向（landscape）一律左右分割
+  @media (orientation: landscape) {
+    display: flex !important;
+    flex-direction: row !important;
 
     .editor-col {
       order: 1;
-      height: 100%;
+      height: 100% !important;
     }
 
     .preview-col {
       order: 2;
-      height: 100%;
+      height: 100% !important;
     }
   }
 
-  // 手機橫向
-  @media (max-width: 767px) and (orientation: landscape) {
-    display: flex;
-    flex-direction: row;
+  // 直立（portrait）一律上下分割
+  @media (orientation: portrait) {
+    display: flex !important;
+    flex-direction: column !important;
 
     .editor-col {
-      order: 1;
-      height: 100%;
+      order: 2;
+      height: 50% !important;
     }
 
     .preview-col {
-      order: 2;
-      height: 100%;
+      order: 1;
+      height: 50% !important;
     }
   }
+}
 
-  // 手機直立
-  @media (max-width: 767px) and (orientation: portrait) {
-    display: flex;
-    flex-direction: column;
+// 預設：直立（column）
+.main-container {
+  display: flex;
+  flex-direction: column;
+}
 
-    .editor-col {
-      order: 2;
-      height: 50%;
-    }
+// 手機橫向（max-width: 767px 且 landscape）改為 row
+@media (max-width: 767px) and (orientation: landscape) {
+  .main-container {
+    flex-direction: row;
+  }
+}
 
-    .preview-col {
-      order: 1;
-      height: 50%;
-    }
+// 桌面橫向（大於 767px）也用 row
+@media (min-width: 768px) {
+  .main-container {
+    flex-direction: row;
+  }
+}
+
+@media (orientation: landscape) {
+
+  .main-row,
+  :deep(.ant-row) {
+    display: flex !important;
+    flex-direction: row !important;
+  }
+
+  .editor-col,
+  .preview-col,
+  :deep(.ant-col) {
+    height: 100% !important;
+    width: 50% !important;
+    max-width: 50% !important;
+    flex: 1 1 0 !important;
   }
 }
 </style>

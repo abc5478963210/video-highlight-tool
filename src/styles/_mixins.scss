@@ -58,4 +58,19 @@
   -webkit-line-clamp: $lines;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+:deep(.ant-row) {
+  height: 100%;
+  @media (orientation: portrait) {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+}
+
+.main-row {
+  @media (max-width: 767px) and (orientation: landscape) {
+    display: flex !important;
+    flex-direction: row !important;
+  }
 } 
