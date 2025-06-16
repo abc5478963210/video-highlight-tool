@@ -6,6 +6,7 @@ import { env } from 'process'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
+  base: '/video-highlight-tool/',
   plugins: [vue()],
   server: {
     port: 5174,
