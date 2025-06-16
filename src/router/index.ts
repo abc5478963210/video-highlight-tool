@@ -1,21 +1,23 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import Home from '../views/Home.vue'
+import HighLightTool from '../views/HighLightTool.vue'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: () => import('../views/Home.vue')
+    component: Home
   },
   {
     path: '/highlight-tool',
     name: 'highlight-tool',
-    component: () => import('../views/HighLightTool.vue')
+    component: HighLightTool
   }
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(),
   routes
 })
 

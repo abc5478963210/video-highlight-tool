@@ -8,6 +8,16 @@ export default defineConfig(({ mode }) => {
   return {
   base: '/video-highlight-tool/',
   plugins: [vue()],
+  build: {
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
+    }
+  },
   server: {
     port: 5174,
     open: true,
