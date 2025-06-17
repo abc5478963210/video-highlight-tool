@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { callApi } from '@/utils/callApi'
 import { processVideo } from '@/api/video'
 import VideoTimeline from '@/components/highLightToo/VideoTimeline.vue'
@@ -207,10 +208,21 @@ watch(videoUrl, async (newUrl) => {
 const handleUpload: UploadProps['customRequest'] = async ({ file }) => {
   if (file instanceof File) {
     try {
+      // 檢查影片時長
+      const videoDurationCheck = await checkVideoDuration(file)
+      if (videoDurationCheck > 60) {
+        const minutes = Math.floor(videoDurationCheck / 60)
+        const seconds = Math.floor(videoDurationCheck % 60)
+        console.log('❌ 影片時長超過限制:', videoDurationCheck, '秒')
+        message.error(`影片時長為 ${minutes}:${seconds.toString().padStart(2, '0')}，超過1分鐘限制！請選擇1分鐘以內的影片。`)
+        return
+      }
+
       videoFile.value = file
       isProcessing.value = true
 
       console.log('📤 開始上傳影片:', file.name)
+      console.log('⏱️ 影片時長:', videoDurationCheck, '秒 (符合1分鐘限制)')
 
       const response = await callApi(processVideo(file))
 
@@ -247,7 +259,28 @@ const handleUpload: UploadProps['customRequest'] = async ({ file }) => {
   }
 }
 
+// 新增：檢查影片時長的函數
+const checkVideoDuration = (file: File): Promise<number> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video')
+    video.preload = 'metadata'
 
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src)
+      const duration = video.duration
+      console.log('🔍 檢查影片時長:', duration, '秒')
+      resolve(duration)
+    }
+
+    video.onerror = () => {
+      window.URL.revokeObjectURL(video.src)
+      console.log('❌ 無法讀取影片資訊')
+      reject(new Error('無法讀取影片資訊'))
+    }
+
+    video.src = URL.createObjectURL(file)
+  })
+}
 
 const toggleHighlight = (sectionIndex: number, sentenceIndex: number) => {
   if (transcriptData.value) {
@@ -364,6 +397,7 @@ const clearAll = () => {
                   <div class="upload-content">
                     <upload-outlined class="upload-icon" />
                     <p>點擊或拖放影片檔案至此處</p>
+                    <p class="upload-limit">僅支援1分鐘以內的影片</p>
                   </div>
                 </a-upload>
               </div>
@@ -563,6 +597,18 @@ const clearAll = () => {
     @media (orientation: portrait),
     (max-width: 767px) {
       font-size: 0.9rem;
+    }
+  }
+
+  .upload-limit {
+    color: $text-secondary !important;
+    font-weight: 400 !important;
+    font-size: 0.85rem !important;
+    margin-top: 4px;
+
+    @media (orientation: portrait),
+    (max-width: 767px) {
+      font-size: 0.8rem !important;
     }
   }
 
