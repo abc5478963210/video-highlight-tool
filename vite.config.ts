@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
       VITE_APP_API_BASE_URL: env.VITE_APP_API_BASE_URL || 'http://localhost:8081',
       VITE_APP_API_PLATFORM: env.VITE_APP_API_PLATFORM || 'api',
       VITE_APP_API_OHO: env.VITE_APP_API_OHO || 'api',
-      VITE_MOCK: env.VITE_MOCK || true
+      VITE_MOCK: env.VITE_MOCK !== undefined ? env.VITE_MOCK : (mode === 'development' ? 'true' : 'true') // 默認啟用 mock
     }
   },
   resolve: {
