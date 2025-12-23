@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:prod": "vite build --mode production",
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
     "mock-server": "npx prism mock -p 8081 src/mock/openapi.yaml",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build:prod && gh-pages -d dist --dotfiles",
+    "deploy:force": "rm -rf dist && npm run build:prod && gh-pages -d dist --dotfiles"
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",
